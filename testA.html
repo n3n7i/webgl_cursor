@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<title>Channel painter</title>
+
+<style>
+
+.block{
+    display:inline-block;
+    position:relative;}
+
+.hidden{
+    display:none;
+    }
+
+div.drop:hover .hidden{
+    display:inline-block;
+    border: 1px solid black;
+    }
+
+div.drop {
+    border: 1px solid blue;
+    }
+
+#range{
+    min:0; max:255;}
+
+</style>
+</head>
+<body>
+
+<script>
+
+function rgbx(a,b,c,d,e,f){
+  this.R=a;    this.aR=b;
+  this.G=c;    this.aG=d;
+  this.B=e;    this.aB=f;
+  this.A=0;    this.aA=255;
+  return this;
+  }
+
+var cl0 = new rgbx(0,255,0,255,0,255);
+
+var colstore = [];
+
+var colind = 0;
+
+function num(x){
+  return 1.0 * x;
+  }
+
+function set_Al(){
+  cl0.A = 2.55 * num(chan.children[12].value);
+  cl0.aA = num(chan.children[13].value);
+  }
+
+function set_cl(){
+  var chan = document.getElementById('chan');
+  cl0.R = 2.55 * num(chan.children[0].value);
+  cl0.G = 2.55 * num(chan.children[3].value);
+  cl0.B = 2.55 * num(chan.children[6].value);
+
+  cl0.aR = num(chan.children[1].value);
+  cl0.aG = num(chan.children[4].value);
+  cl0.aB = num(chan.children[7].value);
+  
+//  cl0.A = 2.55 * num(chan.children[12].value);
+//  cl0.aA = 2.55 * num(chan.children[13].value);
+
+  console.log(cl0);
+
+  if(colind>0){
+
+    var x = cl0;
+    colstore[colind] = new rgbx(x.R, x.aR, x.G, x.aG,x.B, x.aB);
+    }
+  }
+
+
+function get_cl(){
+  var chan = document.getElementById('chan');
+
+  if(colstore[colind]){
+    var x = colstore[colind];
+    chan.children[0].value =   x.R / 2.55; 
+    chan.children[3].value =  x.G / 2.55;
+    chan.children[6].value =  x.B / 2.55;
+
+    chan.children[1].value =   x.aR;
+    chan.children[4].value =   x.aG;
+    chan.children[7].value =   x.aB;
+    }
+  }
+
+
+
+function getmodes(ev){
+  return ev.shiftKey | ev.altKey * 2 | ev.ctrlKey * 4;}
+
+function putcl(x){
+  cl0 = new rgbx(x.R, x.aR, x.G, x.aG,x.B, x.aB);
+  }
+
+
+function getkeys(event){
+
+  if(0<=num(event.key)){ 
+
+    console.log("ok");
+  
+    var n = getmodes(event);
+    console.log(n);
+    if(n==0){
+      colind = num(event.key);
+
+      if(colstore[colind]){
+        putcl(colstore[colind]); //cl0 = colstore[colind];
+        get_cl(); //slider vals
+        }
+      }
+    }
+  }
+
+document.addEventListener('keypress', function(event){ console.log(event); getkeys(event);})
+
+</script>
+
+<canvas "class=block" id="view" width=500 height=500></canvas> 
+<div class="block">
+<h2>Channel painter</h2>
+<div class="drop">
+<h4>Color controls</h2>
+<form id="chan" class="hidden">
+R:<input type="range" class="block"> aR:<input type="range"><br>
+G:<input type="range" class="block"> aG:<input type="range"><br>
+B:<input type="range" class="block"> aB:<input type="range"><br>
+<input type="button" value="Set" onclick="set_cl()">
+<input type="button" value="Get" onclick="get_cl()"><br>
+A:<input type="range" class="block"> aA:<input type="range"><br>
+<input type="button" value="Set-A" onclick="set_Al()">
+</form>
+</div>
+<div class="drop">
+<h4>Brush controls</h2>
+<form id="chan2" class="hidden">
+Size:<input type="range" class="block"> Hardness:<input type="range"><br>
+</form></div>
+
+</div>
+
+<script>
+
+function lin(a,b,c){
+ 
+  //console.log(a + (b-a)*c);
+  return a + (b-a)*c;
+  }
+
+const canvas = document.getElementById('view');
+const ctx = canvas.getContext('2d');
+
+const form = document.getElementById('chan').children;
+
+//ctx.fillStyle = 'green';
+//ctx.fillRect(10, 10, 50, 50);
+
+function put(event) {
+  //console.log(event);
+  var x = event.layerX;
+  var y = event.layerY;
+  if(event.buttons == 1){
+    var pixel = ctx.getImageData(x, y, 50, 50);
+    //console.log("a")//(pixel);
+    for(i=0; i<pixel.data.length; i+=4){
+
+      pixel.data[i] = lin(pixel.data[i], cl0.R, cl0.aR / 100);
+      pixel.data[i+1] = lin(pixel.data[i+1], cl0.G, cl0.aG / 100);
+      pixel.data[i+2] = lin(pixel.data[i+2], cl0.B, cl0.aB / 100);
+
+      pixel.data[i+3] = lin(pixel.data[i+3], cl0.A, cl0.aA / 100);      
+      }
+
+//pixel.data[i+3] = 255; 
+//  pixel.data[2] = 255;
+
+    ctx.putImageData(pixel, x, y);
+    }
+  }
+
+canvas.addEventListener('mousemove', function(event) {
+    put(event);
+});
+
+/*chan[0].addEventListener('onchange', function(event) {
+    console.log("onchange");
+});
+
+//chan.children[0].onchange = function(){ console.log("test");}; //cl0.R = chan.children[0].value; 
+
+//function set_cl(){
+  //cl0.R = chan.children[0].value;
+  //cl0.G = chan.children[3].value;
+  //cl0.B = chan.children[6].value;
+  //}
+*/
+
+
+</script>
+<script src="./grid.js"></script>
+</body>
+</html>
